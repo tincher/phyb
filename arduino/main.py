@@ -20,6 +20,7 @@ self_test_passed = None
 all_data = []
 exercises_data = []
 last_data = {}
+model = None
 
 # -------------------------------------------------
 # TODO self_test_passed konsequenz
@@ -111,15 +112,17 @@ def cluster_data(cluster_count=4):
 
 
 def learn(components_count=10):
+    global model
     points, labels = cluster_data()
-    # soll man öfters laufen lassen und das beste nehmen
-    remodel = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
 
-    X = np.array(points)
+    # soll man öfters laufen lassen und das beste nehmen
+    model = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
+    X = np.array(labels).reshape((-1, 1))
     lengths = [len(x) for x in exercises_data]
-    print(X)
-    print(len(X))
-    print(lengths)
+    # print(X)
+    # print(len(X))
+    # print(lengths)
+    model.fit(X, lengths)
 
 
 def print_countdown_when_ready(seconds=3):
@@ -150,6 +153,13 @@ def read_from_arduino():
         return current_exercise
 
 
+def predict(data):
+    points, labels = cluster_data()
+    labels = np.array(labels).reshape((-1, 1))
+    prediction = model.predict(labels)
+    print(prediction)
+
+
 if __name__ == '__main__':
     print('LERNPHASE')
 
@@ -171,3 +181,5 @@ if __name__ == '__main__':
 
     print('Erkennen ab jetzt möglich!')
     print_countdown_when_ready(0)
+    data = read_from_arduino()
+    predict(data)
