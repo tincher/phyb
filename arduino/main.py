@@ -1,10 +1,12 @@
+from hmmlearn import hmm
+import cli_ui
 import math
 import time
 
 from serial import Serial
 import numpy as np
 from sklearn.cluster import KMeans
-import cli_ui
+from sklearn import preprocessing
 
 baud = 57600
 accel_setting = 2
@@ -13,17 +15,15 @@ sampling_rate = 0.02
 keys = ['ax', 'ay', 'az', 'gx', 'gy', 'gz']
 fts = {}
 testing = False
-orientation = []
 offset = [0, 0, 0]
-points = []
 self_test_passed = None
 all_data = []
+exercises_data = []
 last_data = {}
 
-
 # -------------------------------------------------
-# TODO IMU möglichst nah an schwerpunkt
 # TODO self_test_passed konsequenz
+# TODO ab 1. clusterwechsel ist beginn
 # -------------------------------------------------
 
 
@@ -80,16 +80,16 @@ def finish_self_test(values):
 
 def convert(raw_data, timestamp):
     values = raw_data.decode().replace('\n', '').split(' ')
-    if values[0] == 'B':
-        # button got pressed
-        return False
-    if values[0] == 'I':
+    if values[0] == 'D':
         global testing
         global last_data
+        global all_data
         try:
             data = dict(zip(keys, list(map(int, values[1:]))))
             if testing:
                 self_test_passed = finish_self_test(data)
+                testing = False
+                return
             last_data = data
             all_data.append(data)
             return data
@@ -99,7 +99,27 @@ def convert(raw_data, timestamp):
     elif values[0] == 'S':
         data = dict(zip(keys, list(map(int, values[1:]))))
         init_self_test(data)
-        return 'ST started'
+        print('ST started')  # kann raus
+
+
+def cluster_data(cluster_count=4):
+    global all_data
+    X = [list(x.values()) for x in all_data]
+    kmeans = KMeans(n_clusters=cluster_count).fit(X)
+    labels = kmeans.labels_
+    return X, labels
+
+
+def learn(components_count=10):
+    points, labels = cluster_data()
+    # soll man öfters laufen lassen und das beste nehmen
+    remodel = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
+
+    X = np.array(points)
+    lengths = [len(x) for x in exercises_data]
+    print(X)
+    print(len(X))
+    print(lengths)
 
 
 def print_countdown_when_ready(seconds=3):
@@ -117,29 +137,37 @@ def print_learning_for_activity(activity):
     print('Nach der Ausführung der {} drücken Sie STRG-C'.format(activity))
 
 
+def read_from_arduino():
+    current_exercise = []
+    try:
+        with Serial('/dev/cu.usbserial-1420', baud, timeout=10, write_timeout=5) as my_serial:
+            while True:
+                line = my_serial.readline()
+                result = convert(line, time.time())
+                if result is not None:
+                    current_exercise.append(result)
+    except KeyboardInterrupt:
+        return current_exercise
+
+
 if __name__ == '__main__':
     print('LERNPHASE')
+
     print_learning_for_activity('Kniebeugen')
-    print_countdown_when_ready()
-    try:
-        with Serial('/dev/cu.usbserial-1420', baud, timeout=10, write_timeout=5) as my_serial:
-            in_progress = True
-            while in_progress:
-                line = my_serial.readline()
-                button_pressed = convert(line, time.time())
-    except KeyboardInterrupt:
-        pass
+    print_countdown_when_ready(0)
+    exercise_data = read_from_arduino()
+    exercises_data.append(exercise_data)
+    learn()  # TODO remove
+
     print_learning_for_activity('Situps')
-    print_countdown_when_ready()
-    try:
-        with Serial('/dev/cu.usbserial-1420', baud, timeout=10, write_timeout=5) as my_serial:
-            in_progress = True
-            while in_progress:
-                line = my_serial.readline()
-                button_pressed = convert(line, time.time())
-    except KeyboardInterrupt:
-        pass
+    print_countdown_when_ready(0)
+    exercise_data = read_from_arduino()
+    exercises_data.append(exercise_data)
+
+    learn()
+
     print('Lernphase beendet')
     print()
+
     print('Erkennen ab jetzt möglich!')
-    print_countdown_when_ready()
+    print_countdown_when_ready(0)

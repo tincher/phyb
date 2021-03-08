@@ -352,14 +352,13 @@ int __attribute__((OS_main)) main(void) {
 
 
 ISR(USART_UDRE_vect) {
-    if (isBufferEmpty() { // noch Zeichen im Puffer zum Senden?
+    if (isBufferEmpty()) { // noch Zeichen im Puffer zum Senden?
         UCSR0B &= (255 ^ (1<<UDRIE0));
-    }else{
+    }else {
         char toBeTransmitted;
         if (!isBufferEmpty()){
             toBeTransmitted = getFromBuffer();
             put_c(toBeTransmitted);
-            // TODO zeit seit letzter übertragung?
         }
     }
 }
