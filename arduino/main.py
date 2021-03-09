@@ -2,6 +2,7 @@ from hmmlearn import hmm
 import cli_ui
 import math
 import time
+import json
 
 from serial import Serial
 import numpy as np
@@ -16,15 +17,15 @@ keys = ['ax', 'ay', 'az', 'gx', 'gy', 'gz']
 fts = {}
 testing = False
 offset = [0, 0, 0]
-self_test_passed = None
 all_data = []
 exercises_data = []
 last_data = {}
 model = None
+kmeans = None
 
 # -------------------------------------------------
-# TODO self_test_passed konsequenz
-# TODO ab 1. clusterwechsel ist beginn
+# TODO mehrmals hmm lernen
+# TODO documentation
 # -------------------------------------------------
 
 
@@ -90,7 +91,7 @@ def convert(raw_data, timestamp):
             if testing:
                 self_test_passed = finish_self_test(data)
                 testing = False
-                return
+                return 'ST passed' if self_test_passed else 'ST failed'
             last_data = data
             all_data.append(data)
             return data
@@ -100,29 +101,70 @@ def convert(raw_data, timestamp):
     elif values[0] == 'S':
         data = dict(zip(keys, list(map(int, values[1:]))))
         init_self_test(data)
-        print('ST started')  # kann raus
 
 
-def cluster_data(cluster_count=4):
-    global all_data
-    X = [list(x.values()) for x in all_data]
+def init_kmeans(data, cluster_count=4):
+    X = [list(x.values()) for x in data]
     kmeans = KMeans(n_clusters=cluster_count).fit(X)
-    labels = kmeans.labels_
-    return X, labels
+    return kmeans
 
 
-def learn(components_count=10):
+def learn(components_count=10, cluster_count=10):
     global model
-    points, labels = cluster_data()
+    global all_data
+    global exercises_data
 
-    # soll man öfters laufen lassen und das beste nehmen
+    kmeans = init_kmeans(all_data, cluster_count=cluster_count)
+
+    labels = kmeans.predict([list(x.values()) for x in all_data])
+
+    # sollte man öfters laufen lassen und das beste nehmen
     model = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
     X = np.array(labels).reshape((-1, 1))
     lengths = [len(x) for x in exercises_data]
-    # print(X)
-    # print(len(X))
-    # print(lengths)
     model.fit(X, lengths)
+
+    init_states = []
+    for exercise_data in exercises_data:
+        init_points = [list(x.values()) for x in exercise_data[:5]]
+        init_labels = kmeans.predict(init_points).tolist()
+        init_state = max(set(init_labels), key=init_labels.count)
+
+        all_labels = kmeans.predict([list(x.values()) for x in exercise_data]).tolist()
+        states = model.predict(np.array(all_labels).reshape((-1, 1)))
+        visited_states = []
+        last_state = None
+        for s in states:
+            if s != last_state:
+                visited_states.append(s)
+                last_state = s
+        print(visited_states)
+        print(init_state)
+        visited_states.count(init_state)
+
+        init_states.append(init_state)
+
+    with open('all_data.txt', 'w') as prediction_file:
+        prediction_file.write(str(labels))
+
+
+def predict(data):
+    global kmeans
+    result = {'Kniebeuge': 0, 'Situp': 0}
+
+    kmeans.predict(data)
+    labels = np.array(labels).reshape((-1, 1))
+    prediction = model.predict(labels)
+    with open('prediction.txt', 'w') as prediction_file:
+        prediction_file.write(str(prediction))
+    print(prediction)
+    return result
+
+
+def print_prediction(prediction):
+    print('Ergebnis:')
+    for key in prediction.keys():
+        print('Übung: {}, Anzahl: {}'.format(key, prediction[key]))
 
 
 def print_countdown_when_ready(seconds=3):
@@ -130,14 +172,19 @@ def print_countdown_when_ready(seconds=3):
     while not user_is_ready:
         user_is_ready = cli_ui.ask_yes_no('Bereit?', default=True)
     for i in range(seconds)[::-1]:
-        print(i + 1)
         time.sleep(1)
-    print('LOS!')
+        print(i + 1)
+    print_circle(cli_ui.yellow)
 
 
 def print_learning_for_activity(activity):
-    print('Führen Sie nach dem Countdown 5 {} aus'.format(activity))
+    print('Führen Sie sobald der grüne Kreis erscheint 3 {} aus'.format(activity))
     print('Nach der Ausführung der {} drücken Sie STRG-C'.format(activity))
+
+
+def print_circle(color):
+    big_dot = cli_ui.UnicodeSequence(color, "⬤", "O")
+    cli_ui.info(big_dot)
 
 
 def read_from_arduino():
@@ -147,17 +194,15 @@ def read_from_arduino():
             while True:
                 line = my_serial.readline()
                 result = convert(line, time.time())
-                if result is not None:
+                if result == 'ST passed':
+                    print_circle(cli_ui.green)
+                elif result == 'ST failed':
+                    print('Sensor self-test failed!')
+                    exit()
+                elif result is not None:
                     current_exercise.append(result)
     except KeyboardInterrupt:
         return current_exercise
-
-
-def predict(data):
-    points, labels = cluster_data()
-    labels = np.array(labels).reshape((-1, 1))
-    prediction = model.predict(labels)
-    print(prediction)
 
 
 if __name__ == '__main__':
@@ -167,7 +212,6 @@ if __name__ == '__main__':
     print_countdown_when_ready(0)
     exercise_data = read_from_arduino()
     exercises_data.append(exercise_data)
-    learn()  # TODO remove
 
     print_learning_for_activity('Situps')
     print_countdown_when_ready(0)
@@ -182,4 +226,5 @@ if __name__ == '__main__':
     print('Erkennen ab jetzt möglich!')
     print_countdown_when_ready(0)
     data = read_from_arduino()
-    predict(data)
+    prediction = predict(data)
+    print_prediction(prediction)
