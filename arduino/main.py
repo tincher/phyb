@@ -1,13 +1,11 @@
 from hmmlearn import hmm
 import cli_ui
-import math
 import time
-import json
+
 
 from serial import Serial
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn import preprocessing
 
 baud = 57600
 accel_setting = 2
@@ -24,7 +22,6 @@ model = None
 kmeans = None
 
 # -------------------------------------------------
-# TODO mehrmals hmm lernen
 # TODO documentation
 # -------------------------------------------------
 
@@ -85,7 +82,6 @@ def convert(raw_data, timestamp):
     if values[0] == 'D':
         global testing
         global last_data
-        global all_data
         try:
             data = dict(zip(keys, list(map(int, values[1:]))))
             if testing:
@@ -93,7 +89,6 @@ def convert(raw_data, timestamp):
                 testing = False
                 return 'ST passed' if self_test_passed else 'ST failed'
             last_data = data
-            all_data.append(data)
             return data
         except Exception as e:
             print(e)
@@ -109,55 +104,41 @@ def init_kmeans(data, cluster_count=4):
     return kmeans
 
 
-def learn(components_count=10, cluster_count=10):
-    global model
-    global all_data
-    global exercises_data
+def learn(data, components_count=10, cluster_count=10):
+    all_data = np.concatenate(data)
 
     kmeans = init_kmeans(all_data, cluster_count=cluster_count)
+    model = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
 
     labels = kmeans.predict([list(x.values()) for x in all_data])
-
-    # sollte man öfters laufen lassen und das beste nehmen
-    model = hmm.MultinomialHMM(n_components=components_count, n_iter=100)
-    X = np.array(labels).reshape((-1, 1))
-    lengths = [len(x) for x in exercises_data]
+    X = labels.reshape((-1, 1))
+    lengths = [len(x) for x in data]
+    # TODO sollte man öfters laufen lassen und das beste nehmen
     model.fit(X, lengths)
 
     init_states = []
-    for exercise_data in exercises_data:
-        init_points = [list(x.values()) for x in exercise_data[:5]]
-        init_labels = kmeans.predict(init_points).tolist()
-        init_state = max(set(init_labels), key=init_labels.count)
+    for i, exercise_data in enumerate(data):
+        exercise_labels = kmeans.predict([list(x.values()) for x in exercise_data])
+        exercise_states = model.predict(exercise_labels.reshape((-1, 1)))
 
-        all_labels = kmeans.predict([list(x.values()) for x in exercise_data]).tolist()
-        states = model.predict(np.array(all_labels).reshape((-1, 1)))
-        visited_states = []
-        last_state = None
-        for s in states:
-            if s != last_state:
-                visited_states.append(s)
-                last_state = s
-        print(visited_states)
-        print(init_state)
-        visited_states.count(init_state)
+        init_states.append(exercise_states[0])
 
-        init_states.append(init_state)
-
-    with open('all_data.txt', 'w') as prediction_file:
-        prediction_file.write(str(labels))
+        with open('states_{}.txt'.format(i), 'w') as states_file:
+            states_file.write(str(exercise_states))
+    with open('init_states.txt', 'w') as init_states_file:
+        init_states_file.write(str(init_states))
+    return kmeans, model
 
 
-def predict(data):
-    global kmeans
+def predict(kmeans, model, data):
     result = {'Kniebeuge': 0, 'Situp': 0}
 
-    kmeans.predict(data)
-    labels = np.array(labels).reshape((-1, 1))
+    # nur training data
+    labels = kmeans.predict([list(x.values()) for x in data])
+    labels = labels.reshape((-1, 1))
     prediction = model.predict(labels)
     with open('prediction.txt', 'w') as prediction_file:
         prediction_file.write(str(prediction))
-    print(prediction)
     return result
 
 
@@ -206,19 +187,20 @@ def read_from_arduino():
 
 
 if __name__ == '__main__':
+    learn_data = []
     print('LERNPHASE')
 
     print_learning_for_activity('Kniebeugen')
     print_countdown_when_ready(0)
     exercise_data = read_from_arduino()
-    exercises_data.append(exercise_data)
+    learn_data.append(exercise_data)
 
     print_learning_for_activity('Situps')
     print_countdown_when_ready(0)
     exercise_data = read_from_arduino()
-    exercises_data.append(exercise_data)
+    learn_data.append(exercise_data)
 
-    learn()
+    kmeans, model = learn(learn_data, cluster_count=10, components_count=10)
 
     print('Lernphase beendet')
     print()
@@ -226,5 +208,5 @@ if __name__ == '__main__':
     print('Erkennen ab jetzt möglich!')
     print_countdown_when_ready(0)
     data = read_from_arduino()
-    prediction = predict(data)
+    prediction = predict(kmeans, model, data)
     print_prediction(prediction)

@@ -10,8 +10,12 @@
 \clearpage
 
 \begin{abstract}
-Aufgabenstellung
-Mein Lösungsansatz
+Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene Sportübungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
+Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
+Mein L\"osungsansatz gliedert sich in mehrere Stufen, die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
+Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen.
+In der Lernphase wird mit diesen Beobachtungen ein Hidden Markov Model erlernt.
+In der folgenden Phase k\"onnen \"Ubungen frei ausge\"ubt werden und anschließend wird eine Zusammenfassung welche \"Ubungen wie oft erkannt wurden ausgegeben.
 \end{abstract}
 \clearpage
 
@@ -24,14 +28,16 @@ Mein Lösungsansatz
 
 \section{Konzept}
 \begin{enumerate}
-\item Gyrometer zur Ausrichtung
-\item Accelerometer und Gyrometer mittels mehr dimensionalenm Kalman-Filter kombiniert zur Bewegung im Raum
-\item beides zusammen in ein HMM zur Erkennung von Aktivität und Zählen
+\item Accelerometer und Gyrometer mittels mehrdimensionalenm Kalman-Filter bereinigt
+\item gefilterte Daten werden mittels kmeans geclustert
+\item clusterzugeh\"origkeit als beobachtung in ein HMM zur Erkennung von Aktivit\"at und Z\"ahlen
 \end{enumerate}
-\subsection{Ausrichtung}
-% Filter
-\subsection{Bewegung im Raum}
-% Kalman
+\subsection{Arduino}
+Auf dem Arduino werden die Daten des Beschleunigungssensors und des Gyroskop aus dem IMU ausgelesen.
+Das Gyroskop sowie der Beschleunigungssensor werden dem im Datenblatt beschriebenem Selbsttest unterzogen.
+Dieser soll feststellen, dass die Sensoren noch funktionsf\"ahig sind.
+Die zugeh\"origen Daten werden \"uber die serielle Schnittstelle an ein Pythonskript \"ubermittelt, welches die zugeh\"origen Rechnungen vornimmt und bei Nichtbestehen des Selbsttests das Programm beendet.\\
+
 \subsection{Prozesserkennung}
 
 \section{Experimente}
