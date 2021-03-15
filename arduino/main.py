@@ -17,8 +17,8 @@ def read_from_arduino(count=5):
     baud = 57600
 
     current_exercise = []
-    current_run = []
     for i in range(count):
+        current_run = []
         try:
             with Serial('/dev/cu.usbserial-1420', baud, timeout=10, write_timeout=5) as my_serial:
                 while True:
@@ -37,18 +37,16 @@ def read_from_arduino(count=5):
 
 
 if __name__ == '__main__':
+    exercise_names = ['Kniebeugen', 'Situps']
+    learning_runs_per_exercise = 3
     learn_data = []
+
     print('LERNPHASE')
-
-    print_learning_for_activity('Kniebeugen')
-    print_countdown_when_ready(0)
-    exercise_data = read_from_arduino(2)
-    learn_data.append(exercise_data)
-
-    print_learning_for_activity('Situps')
-    print_countdown_when_ready(0)
-    exercise_data = read_from_arduino(2)
-    learn_data.append(exercise_data)
+    for name in exercise_names:
+        print_learning_for_activity(name, learning_runs_per_exercise)
+        print_countdown_when_ready(0)
+        exercise_data = read_from_arduino(learning_runs_per_exercise)
+        learn_data.append(exercise_data)
 
     predictor = MyPredictor(learn_data)
 
@@ -56,7 +54,8 @@ if __name__ == '__main__':
     print()
 
     print('Erkennen ab jetzt möglich!')
+    count = int(cli_ui.ask_string('Wie viele Ausführungen werden Sie machen?', default=5))
     print_countdown_when_ready(0)
-    data = read_from_arduino()
-    prediction = predictor.predict(data)
-    print_prediction(prediction)
+    data = read_from_arduino(count)
+    prediction = predictor.predict(data, len(exercise_names))
+    print_prediction(exercise_names, prediction)

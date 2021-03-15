@@ -1,10 +1,10 @@
 import cli_ui
 
 
-def print_prediction(prediction):
+def print_prediction(names, predictions):
     print('Ergebnis:')
-    for key in prediction.keys():
-        print('Übung: {}, Anzahl: {}'.format(key, prediction[key]))
+    for name, prediction in zip(names, predictions):
+        print('Übung: {}, Anzahl: {}'.format(name, prediction))
 
 
 def print_countdown_when_ready(seconds=3):
@@ -17,8 +17,8 @@ def print_countdown_when_ready(seconds=3):
     print_circle(cli_ui.yellow)
 
 
-def print_learning_for_activity(activity):
-    print('Führen Sie sobald der grüne Kreis erscheint 3 {} aus'.format(activity))
+def print_learning_for_activity(activity, learning_runs_per_exercise):
+    print('Führen Sie sobald der grüne Kreis erscheint {} {} aus'.format(learning_runs_per_exercise, activity))
     print('Nach der Ausführung der {} drücken Sie STRG-C'.format(activity))
 
 
