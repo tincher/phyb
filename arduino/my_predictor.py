@@ -17,9 +17,9 @@ class MyPredictor:
         self.kmeans = KMeans(n_clusters=cluster_count).fit(self.all_data)
         self.HMMs = [None] * len(exercise_data)
         self.components_counts = components_counts
-        self.learn()
+        self.learn(cluster_count)
 
-    def learn(self, cluster_count=10):
+    def learn(self, cluster_count, init_count=5):
         best_score = -sys.maxsize
         for i, exercise_data in enumerate(self.all_exercises_data):
             exercise_labels = []
@@ -28,7 +28,7 @@ class MyPredictor:
                 exercise_labels.append(run_labels)
             lengths = [len(run_labels) for run_labels in exercise_labels]
             exercise_labels = np.concatenate(exercise_labels).reshape((-1, 1))
-            for j in range(5):
+            for j in range(init_count):
                 current_hmm = hmm.MultinomialHMM(n_components=self.components_counts[i], n_iter=100)
                 current_hmm.fit(exercise_labels, lengths)
                 current_score = current_hmm.score(exercise_labels, lengths)
@@ -42,7 +42,7 @@ class MyPredictor:
         for i, current_hmm in enumerate(self.HMMs):
             if current_hmm.emissionprob_.shape[1] < cluster_count:
                 additional_columns = np.zeros((self.components_counts[i], cluster_count -
-                                               current_hmm.emissionprob_.shape[1])) + 1e-8
+                                               current_hmm.emissionprob_.shape[1])) + 1e-2
                 current_hmm.n_features = cluster_count
                 current_hmm.emissionprob_ = np.hstack((current_hmm.emissionprob_, additional_columns))
 
@@ -57,13 +57,13 @@ class MyPredictor:
                 if current_score > best_score:
                     best_score = current_score
                     best_fit_index = i
-            counter[i] += 1
+            counter[best_fit_index] += 1
         return counter
 
-    def save_model(self, path='./model.pkl'):
+    def save_model(self, path='./predictor.pkl'):
         with open(path, 'wb') as file:
-            pickle.dump(self.HMM, file)
+            pickle.dump(self, file)
 
-    def load_model(self, path='./model.pkl'):
+    def load_model(self, path='./predictor.pkl'):
         with open(path, 'rb') as file:
-            self.HMM = pickle.load(file)
+            self = pickle.load(file)

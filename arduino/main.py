@@ -2,8 +2,10 @@ import cli_ui
 from my_predictor import MyPredictor
 from arduino_converter import ArduinoConverter
 from pretty_prints import *
+import pickle
 
 from serial import Serial
+from tqdm import *
 
 # -------------------------------------------------
 # TODO documentation
@@ -37,8 +39,8 @@ def read_from_arduino(count=5):
 
 
 if __name__ == '__main__':
-    exercise_names = ['Kniebeugen', 'Situps']
-    learning_runs_per_exercise = 3
+    exercise_names = ['Erste Übung', 'Zweite Übung']
+    learning_runs_per_exercise = 5
     learn_data = []
 
     print('LERNPHASE')
@@ -48,14 +50,14 @@ if __name__ == '__main__':
         exercise_data = read_from_arduino(learning_runs_per_exercise)
         learn_data.append(exercise_data)
 
-    predictor = MyPredictor(learn_data)
+    predictor = MyPredictor(learn_data, cluster_count=5, components_counts=[5, 5])
 
     print('Lernphase beendet')
     print()
-
     print('Erkennen ab jetzt möglich!')
+
     count = int(cli_ui.ask_string('Wie viele Ausführungen werden Sie machen?', default=5))
     print_countdown_when_ready(0)
-    data = read_from_arduino(count)
-    prediction = predictor.predict(data, len(exercise_names))
+    recognition_data = read_from_arduino(count)
+    prediction = predictor.predict(recognition_data, len(exercise_names))
     print_prediction(exercise_names, prediction)
