@@ -1,10 +1,12 @@
 import cli_ui
+from num2words import num2words
 
 
-def print_prediction(names, predictions):
+def print_prediction(predictions):
     print('Ergebnis:')
-    for name, prediction in zip(names, predictions):
-        print('Übung: {}, Anzahl: {}'.format(name, prediction))
+    for i, prediction in enumerate(predictions):
+        number_name = num2words(i + 1, lang='de', to='ordinal')
+        print('{} Übung: {}'.format(number_name, prediction))
 
 
 def print_countdown_when_ready(seconds=3):

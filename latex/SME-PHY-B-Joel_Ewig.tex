@@ -3,7 +3,7 @@
 
 \begin{document}
 
-\title{Hausarbeit SME-PHY-B: Wahlthema 2 - Fitnesszähler}
+\title{Hausarbeit SME-PHY-B: Wahlthema 2 - Fitnessz\"ahler}
 \author{Joel Ewig}
 \date{\today}
 \maketitle
@@ -12,10 +12,12 @@
 \begin{abstract}
 Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene Sportübungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
 Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
-Mein L\"osungsansatz gliedert sich in mehrere Stufen, die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
+Mein L\"osungsansatz gliedert sich in mehrere Stufen:
+die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
 Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen.
-In der Lernphase wird mit diesen Beobachtungen ein Hidden Markov Model erlernt.
-In der folgenden Phase k\"onnen \"Ubungen frei ausge\"ubt werden und anschließend wird eine Zusammenfassung welche \"Ubungen wie oft erkannt wurden ausgegeben.
+In der Lernphase wird mit diesen Beobachtungen pro \"Ubung ein Hidden Markov Model erlernt.
+In der folgenden Detektionsphase werden die empfangenen Daten ebenfalls geclustert und die Beobachtungen an alle Hidden Markov Modelle weitergegeben.
+Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als aussgeführt behandelt.
 \end{abstract}
 \clearpage
 

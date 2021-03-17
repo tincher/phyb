@@ -3,7 +3,6 @@ import pickle
 from hmmlearn import hmm
 import sys
 from sklearn.cluster import KMeans
-import pdb
 
 
 class MyPredictor:
