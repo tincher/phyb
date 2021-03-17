@@ -10,23 +10,19 @@
 \clearpage
 
 \begin{abstract}
-Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene Sportübungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
+Sensorbasiert sollen \"ahnlich einer Fitnessuhr verschiedene Sport\"ubungen erkennt sowie die Anzahl wie oft diese jeweils ausgef\"uhrt wurden.
 Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
 Mein L\"osungsansatz gliedert sich in mehrere Stufen:
 die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
 Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen.
 In der Lernphase wird mit diesen Beobachtungen pro \"Ubung ein Hidden Markov Model erlernt.
 In der folgenden Detektionsphase werden die empfangenen Daten ebenfalls geclustert und die Beobachtungen an alle Hidden Markov Modelle weitergegeben.
-Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als aussgeführt behandelt.
+Das HMM welches die h\"ochste Wahrscheinlichkeit f\"ur die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugeh\"orige \"ubung wird als ausgef\"uhrt behandelt.
 \end{abstract}
 \clearpage
 
 \tableofcontents
 \clearpage
-
-% kalman: https://www.youtube.com/watch?v=I4DT1jj9ucI
-% HMM: https://github.com/OlegZero13/Data-Science-Algorithm-Gallery/tree/master/Hidden%20Markov%20Model
-% https://www.mdpi.com/2218-6581/4/1/63
 
 \section{Konzept}
 \begin{enumerate}
@@ -34,16 +30,44 @@ Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobach
 \item gefilterte Daten werden mittels kmeans geclustert
 \item clusterzugeh\"origkeit als beobachtung in ein HMM zur Erkennung von Aktivit\"at und Z\"ahlen
 \end{enumerate}
-\subsection{Arduino}
+
+\section{Sensorik}
 Auf dem Arduino werden die Daten des Beschleunigungssensors und des Gyroskop aus dem IMU ausgelesen.
 Das Gyroskop sowie der Beschleunigungssensor werden dem im Datenblatt beschriebenem Selbsttest unterzogen.
 Dieser soll feststellen, dass die Sensoren noch funktionsf\"ahig sind.
 Die zugeh\"origen Daten werden \"uber die serielle Schnittstelle an ein Pythonskript \"ubermittelt, welches die zugeh\"origen Rechnungen vornimmt und bei Nichtbestehen des Selbsttests das Programm beendet.\\
 
-\subsection{Prozesserkennung}
+\section{Mehrdimensionaler Kalman-Filter}
+Der mehrdimensionale Kalman-Filter soll hier vernachl\"assigt werden, da er nicht unbedingt n\"otig ist f\"ur die Erkennung.
+Mit einem Kalman-Filter w\"are die Erkennung vermutlich robuster, da ohne ihn entsprechende Ausreißer bei relativ kleinen $k$s zu unsichereren Clustern f\"uhrt.
+Falls mit einem großen $k$ gearbeitet wird, bekommt ein solchen Ausreißer ein eigenes Cluster und das HMM muss ihn ber\"ucksichtigen k\"onnen, was bei so einem kleinen Datensatz wie hier unvorteilhaft ist.\\
+Da dies allerdings Ausnahmef\"alle sind, k\"onnen wir diese hier vernachl\"assigen.
 
-\section{Experimente}
+\section{Lernphase}
+Die einkommenden 6-dimensionalen Daten werden mit einem KMeans geclustert.
+Experimentell wurde ermittelt, dass stabile Ergebnisse f\"ur alle $k \geq 3$  f\"ur einfache und wenige \"ubungen liefert.
+Ab $k \geq 5$ auch mit mehr beziehungsweise voneinander unterschiedlicheren \"ubungen, weshalb $k = 5$ als Default-Wert genutzt wird.
+F\"ur sehr komplexe \"ubungen sollte $k$ erh\"oht werden.
+Der kmeans wird auf den kompletten Trainingsdaten, also unabh\"angig von den \"ubungen, initialisiert.
+Jeder Punkt bekommt dadurch einen Clusternamen zugewiesen, hier: Nummern, welche weiterverarbeitet werden.\\
+Die Clusternamen sind die Beobachtungen die als Eingabe f\"ur das Lernen der HMMs dienen.
+Ein HMM f\"ur eine \"ubung wird wie folgt trainiert:
+Zuerst werden die Emissionswahrscheinlichkeiten und die \"uberg\"ange zwischen den versteckten Zust\"anden zuf\"allig initialisiert.
+Anschließend werden die genannten Werte mittels des Baum-Welsh Algorithmus an die in der Lernphase aufgenommenen Sequenzen angepasst.
+Die HMMs werden mehrfach initialisiert um zu die Wahrscheinlichkeit zu vermindern, dass man nicht \"uber ein lokales Optimum hinauskommt.
+Es wird das HMM gew\"ahlt, welche die gr\"oßte Sicherheit bei der Erkennung der bekannten \"ubungen aufweist.
+Es wird nicht in ein Trainings- und Testdatensatz unterteilt, da der Datensatz so klein wie m\"oglich bleiben soll.
+
+\section{Detektionsphase}
+In der Detektionsphase werden die empfangenen Daten mit dem K-Means aus der Lernphase geclustert.
+Der K-Means ist eingefroren, das heißt die Clustermittelpunkte bleiben wie sie in der Lernphase festgestellt wurden.\\
+Die Beobachtungen einer Durchf\"uhrung werden allen HMMs zugef\"uhrt, diese geben die Emissionswahrscheinlichkeit f\"ur die beobachtete Sequenz aus.
+Es wird die \"ubung erkannt, dessen zugeh\"origes HMM die h\"ochste Wahrscheinlichkeit f\"ur die Emission der beobachteten Sequenz ausgibt.
+
+
 \section{Evaluation}
+% TODO schaubild f\"ur 2-15 cluster 2-15 states
+% TODO f\"ur verschieden hohe anzahl durchf\"uhrungen
 
 
 

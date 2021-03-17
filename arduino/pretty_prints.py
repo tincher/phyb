@@ -19,9 +19,10 @@ def print_countdown_when_ready(seconds=3):
     print_circle(cli_ui.yellow)
 
 
-def print_learning_for_activity(activity, learning_runs_per_exercise):
-    print('Führen Sie sobald der grüne Kreis erscheint {} {} aus'.format(learning_runs_per_exercise, activity))
-    print('Nach der Ausführung der {} drücken Sie STRG-C'.format(activity))
+def print_learning_for_activity(counter, learning_runs_per_exercise):
+    number_name = num2words(counter + 1, lang='de', to='ordinal')
+    print('Führen Sie sobald der grüne Kreis erscheint die {} Übung {} mal aus'.format(number_name, learning_runs_per_exercise))
+    print('Nach der Ausführung jeder Ausführung drücken Sie STRG-C')
 
 
 def print_circle(color):

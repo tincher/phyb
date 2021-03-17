@@ -6,7 +6,7 @@ from sklearn.cluster import KMeans
 
 
 class MyPredictor:
-    def __init__(self, exercise_data, cluster_count=5, components_counts=[3, 3]):
+    def __init__(self, exercise_data, cluster_count=5, components_counts=[3, 3], init_count=5):
         self.all_exercises_data = exercise_data
         self.all_data = None
         for exercise in self.all_exercises_data:
@@ -16,9 +16,9 @@ class MyPredictor:
         self.kmeans = KMeans(n_clusters=cluster_count).fit(self.all_data)
         self.HMMs = [None] * len(exercise_data)
         self.components_counts = components_counts
-        self.learn(cluster_count)
+        self.learn(cluster_count, init_count)
 
-    def learn(self, cluster_count, init_count=5):
+    def learn(self, cluster_count, init_count):
         best_score = -sys.maxsize
         for i, exercise_data in enumerate(self.all_exercises_data):
             exercise_labels = []
@@ -47,6 +47,7 @@ class MyPredictor:
 
     def predict(self, data, exercise_count):
         counter = [0] * exercise_count
+        timeline = []
         for run in data:
             labels = self.kmeans.predict(run)
             labels = labels.reshape((-1, 1))
@@ -57,7 +58,8 @@ class MyPredictor:
                     best_score = current_score
                     best_fit_index = i
             counter[best_fit_index] += 1
-        return counter
+            timeline.append(best_fit_index)
+        return counter, timeline
 
     def save_model(self, path='./predictor.pkl'):
         with open(path, 'wb') as file:
