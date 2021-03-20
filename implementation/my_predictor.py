@@ -3,7 +3,7 @@ import pickle
 from hmmlearn import hmm
 import sys
 from sklearn.cluster import KMeans
-
+import math
 
 class MyPredictor:
     def __init__(self, exercise_data, cluster_count=5, components_counts=[3, 3], init_count=5):
@@ -46,12 +46,12 @@ class MyPredictor:
                 current_hmm.emissionprob_ = np.hstack((current_hmm.emissionprob_, additional_columns))
 
     def predict(self, data, exercise_count):
-        counter = [0] * exercise_count
+        counter = [0] * (exercise_count + 1)
         timeline = []
         for run in data:
             labels = self.kmeans.predict(run)
             labels = labels.reshape((-1, 1))
-            current_score, best_score, best_fit_index = 0, -sys.maxsize, None
+            current_score, best_score, best_fit_index = 0, -math.inf, exercise_count
             for i, current_hmm in enumerate(self.HMMs):
                 current_score = current_hmm.score(labels)
                 if current_score > best_score:
