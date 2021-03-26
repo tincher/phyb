@@ -5,11 +5,11 @@ import numpy as np
 from matplotlib import cm
 import matplotlib.pyplot as plt
 
-def make_figure(x, y, z, path):
+def make_figure(x, y, z, path, exercise_count):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     ax.plot_surface(x, y, z, cmap=cm.coolwarm)
-    ax.set_title('2 Übungen')
+    ax.set_title('{} Übungen'.format(exercise_count))
     ax.set_xlim3d(2, 15)
     ax.set_ylim3d(2, 10)
     ax.set_zlim3d(0, 1)
@@ -59,4 +59,4 @@ if __name__ == '__main__':
         Z = f(Xs, Ys, exercises_count, exercise_data)
 
         path = './{}_graph.png'.format(exercises_count)
-        make_figure(Xs, Ys, Z, path)
+        make_figure(Xs, Ys, Z, path, exercises_count)
