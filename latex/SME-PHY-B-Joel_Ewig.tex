@@ -31,9 +31,58 @@ Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobach
 \section{Konzept}
 \begin{enumerate}
 \item Accelerometer und Gyrometer mittels mehrdimensionalenm Kalman-Filter bereinigt
-\item gefilterte Daten werden mittels kmeans geclustert
+\item gefilterte Daten werden mittels K-Means geclustert
 \item clusterzugehörigkeit als beobachtung in ein HMM zur Erkennung von Aktivität und Zählen
 \end{enumerate}
+Es folgt ein Beispiel für eine typische Ausführung während der Detektionsphase:\\
+Während der Ausführung einer Übung werden die Daten des Gyroskops und des Beschleunigungssensors erfasst.
+Für 5 Zeitschritte haben die Gyroskopdaten die Form:
+\begin{align*}
+\left[\begin{array}{rrrrr}
+g_{1}^1 & g_{1}^2 & g_{1}^3 & g_{1}^4 & g_{1}^5 \\
+g_{2}^1 & g_{2}^2 & g_{2}^3 & g_{2}^4 & g_{2}^5 \\
+g_{3}^1 & g_{3}^2 & g_{3}^3 & g_{3}^4 & g_{3}^5 \\
+\end{array}\right]
+\end{align*}
+und die des Beschleunigungssensors die Form:
+\begin{align*}
+\left[\begin{array}{rrrrr}
+a_{1}^1 & a_{1}^2 & a_{1}^3 & a_{1}^4 & a_{1}^5 \\
+a_{2}^1 & a_{2}^2 & a_{2}^3 & a_{2}^4 & a_{2}^5 \\
+a_{3}^1 & a_{3}^2 & a_{3}^3 & a_{3}^4 & a_{3}^5 \\
+\end{array}\right]
+\end{align*}
+Diese werden mit einem mehrdimensionalen Kalman-Filter bereinigt und zusammengeführt, das sieht dann so aus:
+\begin{align*}
+\left[\begin{array}{rrrrr}
+a_{1}^1 & a_{1}^2 & a_{1}^3 & a_{1}^4 & a_{1}^5 \\
+a_{2}^1 & a_{2}^2 & a_{2}^3 & a_{2}^4 & a_{2}^5 \\
+a_{3}^1 & a_{3}^2 & a_{3}^3 & a_{3}^4 & a_{3}^5 \\
+g_{1}^1 & g_{1}^2 & g_{1}^3 & g_{1}^4 & g_{1}^5 \\
+g_{2}^1 & g_{2}^2 & g_{2}^3 & g_{2}^4 & g_{2}^5 \\
+g_{3}^1 & g_{3}^2 & g_{3}^3 & g_{3}^4 & g_{3}^5 \\
+\end{array}\right]
+\end{align*}
+Die Spaltenvektoren dienen als Eingabe für den K-Means Clustering Algorithmus.
+Dieser gibt für jeden Spaltenvektor das zugehörige Cluster $c$ aus:
+\begin{align*}
+\left[\begin{array}{r}
+a_{11}\\
+a_{21}\\
+a_{31}\\
+g_{11}\\
+g_{21}\\
+g_{31}\\
+\end{array}\right]
+\rightarrow c_1
+\end{align*}
+Die Sequenz der Clusternamen dient als Eingabe in $n$ Hidden Markov Modelle, n ist dabei die Anzahl der Übungen, die erkannt werden sollen.
+Die Hidden Markov Modelle geben eine Emissionswahrscheinlichkeit für die beobachtete Folge an:
+\begin{align*}
+\left[c_1, c_2, c_3, c_4, c_5\right] \rightarrow p_1, p_2, .. p_n
+\end{align*}
+Aus den Emissionswahrscheinlichkeiten $p$ wird die größte gewählt.
+Die zum gewählten Hidden Markov Model gehörende Übung gilt als erkannt.
 
 \section{Sensorik}
 Auf dem Arduino werden die Daten des Beschleunigungssensors und des Gyroskop aus dem IMU ausgelesen.
@@ -43,25 +92,68 @@ Die zugehörigen Daten werden über die serielle Schnittstelle an ein Pythonskri
 
 \section{Mehrdimensionaler Kalman-Filter}
 Der mehrdimensionale Kalman-Filter soll hier vernachlässigt werden, da er nicht unbedingt nötig ist für die Erkennung.
-Mit einem Kalman-Filter wäre die Erkennung vermutlich robuster, da ohne ihn entsprechende Ausreißer bei relativ kleinen $k$s zu unsichereren Clustern führt.
-Falls mit einem großen $k$ gearbeitet wird, bekommt ein solchen Ausreißer ein eigenes Cluster und das HMM muss ihn berücksichtigen können, was bei so einem kleinen Datensatz wie hier unvorteilhaft ist.
-Da dies allerdings Ausnahmefälle sind, können wir diese hier vernachlässigen.
-\section{Lernphase}
-Die einkommenden 6-dimensionalen Daten werden mit einem KMeans geclustert.
-Experimentell wurde ermittelt, dass stabile Ergebnisse für alle $k \geq 3$  für einfache und wenige Übungen liefert.
-Ab $k \geq 5$ auch mit mehr beziehungsweise voneinander unterschiedlicheren Übungen, weshalb $k = 5$ als Default-Wert genutzt wird.
-Für sehr komplexe Übungen sollte $k$ erhöht werden.
-Der kmeans wird auf den kompletten Trainingsdaten, also unabhängig von den Übungen, initialisiert.
-Jeder Punkt bekommt dadurch einen Clusternamen zugewiesen, hier: Nummern, welche weiterverarbeitet werden.
+Mit einem solchen Kalman-Filter wäre die Erkennung vermutlich robuster, da mit bereinigten Daten \glqq engere \grqq{} Cluster zu erwarten wären.
+Hier wird aus Zeitgründen auf einen Kalman-Filter verzichtet, da dieser die Ergebnisse zwar verbessern würde, allerdings nicht unbedingt notwendig ist.\\
+Ein solcher Filter würde wie folgt funktionieren;
+\begin{align*}
+X^{[t+1]} &= A^{[t]}X^{[t]} + B^{[t]}u^{[t]} + C^{[t]} + \epsilon^{[t]}\\
+\left[\begin{array}{r}
+a_{1}\\
+a_{2}\\
+a_{3}\\
+g_{1}\\
+g_{2}\\
+g_{3}\\
+\end{array}\right]^{[t+1]}
+&= A^{[t]} \left[\begin{array}{r}
+a_{1}\\
+a_{2}\\
+a_{3}\\
+g_{1}\\
+g_{2}\\
+g_{3}\\
+\end{array}\right]^{[t]}
++ B^{[t]}\left[\begin{array}{r}
+ra_{1}\\
+ra_{2}\\
+ra_{3}\\
+rg_{1}\\
+rg_{2}\\
+rg_{3}\\
+\end{array}\right]^{[t]}
++ C^{[t]} + \epsilon^{[t]}
+\end{align*}
+Dabei müssen $A^{[t]}$, $B^{[t]}$ und $C^{[t]}$ gesetzt und experimentell überprüft werden.
+$\epsilon^{[t]}$ modelliert das Messrauschen und ist damit bei der Implementierung nicht zu beachten, es darf allerdings nicht vergessen werden, dass der Kalman-Filter nur ein Zustands\textbf{schätzer} ist.
+
+\section{Phasen}
+Der Ansatz nutzt in der Praxis zwei Phasen.
+In der Ersten, der Lernphase, wird die Anzahl der zu erkennenden Übungen sowie für jede Übung eine Anzahl an Ausführungen festgelegt.
+Nachdem diese ausgeführt wurden und fertig verarbeitet wurden ist die Lernphase beendet.
+In der Detektionsphase wird eine Anzahl an zu erkennenden Ausführungen festgelegt.
+Nachdem diese ausgeführt wurden, wird das Ergebnis der Detektion ausgegeben und die Detektionsphase ist beendet.
+
+\subsection{Lernphase}
+Die einkommenden 6-dimensionalen Daten werden wie oben beschrieben mit einem K-Means geclustert.
+Der K-Means wird auf den kompletten Trainingsdaten, also unabhängig von den Übungen, initialisiert.
+Jeder Punkt bekommt dadurch einen Clusternamen zugewiesen, umgesetzt als Nummern, welche weitergegeben werden.
 Die Clusternamen sind die Beobachtungen die als Eingabe für das Lernen der HMMs dienen.\\
+Genutzt wird ein Hidden Markov Model $(\pi, p, q)$ mit:
+\begin{enumerate}
+\item $\pi: Z \rightarrow [0,1]$ als inititale Wahrscheinlichkeiten für die Zustände $Z$
+\item $p: Z \times Z \rightarrow [0,1]$ als Übergangswahrscheinlichkeiten zwischen den Zuständen $Z$
+\item $q: Z \times B \rightarrow [0,1]$ als Beobachtungswahrscheinlichkeiten für die Beobachtung $B$ in den Zuständen $Z$
+\end{enumerate}
 Ein HMM für eine Übung wird wie folgt trainiert:
-Zuerst werden die Emissionswahrscheinlichkeiten und die Übergänge zwischen den versteckten Zuständen zufällig initialisiert.
+Zuerst werden die Emissionswahrscheinlichkeiten und die Übergänge zwischen den versteckten Zuständen zufällig initialisiert, konkret wird also $\pi$ mit Zufallszahlen im Intervall $[0,1]$ gefüllt.
 Anschließend werden die genannten Werte mittels des Baum-Welch Algorithmus an die in der Lernphase aufgenommenen Sequenzen angepasst, mehr dazu in Kapitel \ref{sec:BaumWelch}.
 Die HMMs werden mehrfach initialisiert um zu die Wahrscheinlichkeit zu vermindern, dass man nicht über ein lokales Optimum hinauskommt.
-Es wird das HMM gewählt, welche die größte Sicherheit bei der Erkennung der bekannten Übungen aufweist.
-Es wird nicht in ein Trainings- und Testdatensatz unterteilt, da der Datensatz so klein wie möglich bleiben soll.
+Es wird das HMM gewählt, welche die größte Wahrscheinlichkeit bei der Erkennung der bekannten Übungen aufweist.
+Durch die geringe Anzahl an Lerndaten, wird hier keine Mindestwahrscheinlichkeit gesetzt, da dazu zu wenig Trainingsdaten vorhanden sind.
+In den durchgeführten Experimenten hat sich kein Wert als stabil erwiesen.
+Das liegt an dem Ziel, mit möglichst wenigen Übungen in der Lernphase auszukommen, dadurch bleibt der Trainingsdatenumfang relativ gering.
 
-\section{Detektionsphase}
+\subsection{Detektionsphase}
 In der Detektionsphase werden die empfangenen Daten mit dem K-Means aus der Lernphase geclustert.
 Der K-Means ist eingefroren, das heißt die Clustermittelpunkte bleiben wie sie in der Lernphase festgestellt wurden.\\
 Die Beobachtungen einer Durchführung werden allen HMMs zugeführt, diese geben die Emissionswahrscheinlichkeit für die beobachtete Sequenz aus.
@@ -107,32 +199,29 @@ Diese Operationen werden ausgeführt bis sich keiner der Werte um mehr als ein M
 
 
 \section{Evaluation}
-\begin{figure}[h]
+
+Experimentell wurde ermittelt, dass stabile Ergebnisse für alle $k \geq 3$  für einfache und wenige Übungen liefert.
+Ab $k \geq 5$ auch mit mehr beziehungsweise voneinander unterschiedlicheren Übungen, weshalb $k = 5$ als Default-Wert genutzt wird.
+Für sehr komplexe Übungen sollte $k$ erhöht werden.\\
+FÜ
+\begin{figure}[htbp]
 \centering
-\label{fig:neuron}
 \includegraphics[width=0.7\textwidth]{figures/2_graph.png}
-\caption{Bildunterschrift}
 \end{figure}
-\begin{figure}[h]
+
+\begin{figure}[htbp]
 \centering
-\label{fig:neuron}
 \includegraphics[width=0.7\textwidth]{figures/3_graph.png}
-\caption{Bildunterschrift}
 \end{figure}
-\begin{figure}[h]
+
+\begin{figure}[htbp]
 \centering
-\label{fig:neuron}
 \includegraphics[width=0.7\textwidth]{figures/4_graph.png}
-\caption{Bildunterschrift}
 \end{figure}
-\begin{figure}[h]
+
+\begin{figure}[htbp]
 \centering
-\label{fig:neuron}
 \includegraphics[width=0.7\textwidth]{figures/5_graph.png}
-\caption{Bildunterschrift}
 \end{figure}
-
-
-
 
 \end{document}
