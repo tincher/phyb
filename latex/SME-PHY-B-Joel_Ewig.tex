@@ -4,6 +4,7 @@
 \usepackage{amssymb}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
+\usepackage{hyperref}
 
 \begin{document}
 
@@ -14,7 +15,7 @@
 \clearpage
 
 \begin{abstract}
-Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene SportÜbungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
+Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene Sportübungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
 Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
 Mein Lösungsansatz gliedert sich in mehrere Stufen:
 die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
@@ -198,30 +199,61 @@ Diese Operationen werden ausgeführt bis sich keiner der Werte um mehr als ein M
 
 
 
-\section{Evaluation}
-
-Experimentell wurde ermittelt, dass stabile Ergebnisse für alle $k \geq 3$  für einfache und wenige Übungen liefert.
-Ab $k \geq 5$ auch mit mehr beziehungsweise voneinander unterschiedlicheren Übungen, weshalb $k = 5$ als Default-Wert genutzt wird.
-Für sehr komplexe Übungen sollte $k$ erhöht werden.\\
-FÜ
-\begin{figure}[htbp]
+\section{Evaluierung}
+\label{sec:evaluation}
+Im Folgenden werden vor allem Experimente mit dem bestehenden Ansatz und verschiedenen Parametern betrachtet.
+Unabhängig davon eine Beobachtungen, die nicht tiefer betrachtet wurden:
+Übungen die keine oder wenig Bewegung des Arduinos umfassen verschlechtern die Erkennungsleistung maßgeblich.
+Es liegt die Vermutung nahe, dass das daran liegt, dass die meisten Übungen im Stillstand beginnen, enden oder einen \glqq Umkehrpunkt \grqq{} beinhalten, sodass mindestens ein Zeitschritt erfasst wird, welcher eine Beschleunigung nahe null aufweist.
+Man kann diesen Sprung in den folgenden Diagrammen auch beobachte, der Sprung in der Erkennungsleistung von Abbildung \ref{fig:drei} auf Abbildung \ref{fig:vier} liegt unter anderem daran, dass die vierte Übung viel Stillstand beinhält.\\
+Die folgenden Diagramme wurden erstellt mit verschiedener Anzahl an Übungen die erkennt werden sollen.
+Auf der Hochachse ist der Anteil an richtig erkannten Übungen aufgetragen, auf den anderen Achse jeweils die Clusteranzahl und die Ausführungsanzahl während der Trainingsphase.
+Hier werden nicht die üblichen Maße Precision und Recall genutzt, da wie oben beschrieben keine feste Mindestwahrscheinlichkeit festgelegt werden konnte und damit ein Nichterkennen nicht scharf definiert werden kann.\\
+Die Daten zu den Schaubildern bauen aufeinander auf, die Ausführungen für die Übungen sind immer die selben, es werden nur mehr Übungen oder Ausführungen betrachtet.
+Die gesehenen Ausführungen sind also entlang einer Linie immer die selben.
+Die Hidden Markov Modelle haben jeweils 5 Zustände, was sich in Experimenten, die hier nicht ausgeführt werden sollen als bester Kompromiss zwischen Lernzeit und Erkennungsleistung herausgestellt hat.
+\medskip
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/2_graph.png}
-\end{figure}
-
-\begin{figure}[htbp]
+\caption{Diagramm für 2 verschiedene Übungen}
+\label{fig:zwei}
+\end{figure}\\
+Bei der Unterscheidung von 2 Übungen (Abbildung \ref{fig:zwei}) ist die Erkennungsleistung im Allgemeinen sehr hoch, aber eine höheres $k$, also eine höhere Anzahl an Clustern scheint hier die Übungen schärfer voneinander zu trennen.
+Die Anzahl an Ausführungen spielt in diesem Fall dagegen eine eher untergeordnete Rolle für die Erkennungsleistung.
+\medskip
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/3_graph.png}
-\end{figure}
-
+\caption{Diagramm für 3 verschiedene Übungen}
+\label{fig:drei}
+\end{figure}\\
+In Abbildung \ref{fig:drei} wird erkennbar, dass die Anzahl an Ausführungen mehr ins Gewicht fällt.
+Auch hier ist wieder zu erkennen, dass ein etwas größeres $k$ bessere Ergebnisse erzielt.
+Dieses sollte man jedoch auch nicht zu hoch wählen, da man sonst riskiert einzelne, tatsächliche Cluster aufzuteilen welche das Hidden Markov Model dann als gleichwertig erlernen muss.
+Außerdem wird damit auch das Hidden Markov Model umfangreicher und mehr Ausführungsdaten werden benötigt um gute Erebnisse zu erzielen.\\
+\medskip
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/4_graph.png}
-\end{figure}
-
+\caption{Diagramm für 4 verschiedene Übungen}
+\label{fig:vier}
+\end{figure}\\
+Für die Unterscheidung von 4 Übungen (Abbildung \ref{fig:vier}) ist der oben erwähnte negative Sprung erkennbar, da die vierte Übung weniger Bewegung umfasst.
+Der bisher erkennbare Vorteil von mehr Clustern scheint sich zu verkleinern, ist aber noch erkennbar.
+Eine höhere Ausführungsanzahl scheint hier den klaren Vorteil zu bringen.\\
+\medskip
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figures/5_graph.png}
-\end{figure}
+\caption{Diagramm für 5 verschiedene Übungen}
+\label{fig:fuenf}
+\end{figure}\\
+Mit 5 Übungen als Grundlage (Abbildung \ref{fig:fuenf}) verfestigt sich der bisherige Trend, dass mehr Ausführungen zu deutlich besseren Ergebnissen führt.
+Die Clusteranzahl bietet keinen deutlichen Vorteil mehr.\\
+Abschließend lässt sich feststellen, dass mehr Ausführungen bei mehr Übungen einen großen Vorteil geben.
+Darüber hinaus sollte auch immer ein $k$ gewählt werden, das nicht zu klein ist, vor allem für wenige Übungen.\\
+Als Ausgangspunkt empfiehlt es sich $k=5$ zu setzen, $5$ versteckte Zustände zu nutzen und $5$ Ausführungen zu nutzen, diese können dann natürlich je nach Performanz angepasst werden.
+
 
 \end{document}
