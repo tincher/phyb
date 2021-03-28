@@ -20,9 +20,9 @@ Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
 Mein Lösungsansatz gliedert sich in mehrere Stufen:
 die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
 Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen.
-In der Lernphase wird mit diesen Beobachtungen pro Übung ein Hidden Markov Model erlernt.
+In der Lernphase wird mit diesen Beobachtungen pro Übung ein Hidden Markov Modell erlernt.
 In der folgenden Detektionsphase werden die empfangenen Daten ebenfalls geclustert und die Beobachtungen an alle Hidden Markov Modelle weitergegeben.
-Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als ausgeführt behandelt.
+Das Hidden Markov Modell welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als ausgeführt behandelt.
 \end{abstract}
 \clearpage
 
@@ -30,11 +30,47 @@ Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobach
 \clearpage
 
 \section{Konzept}
+\label{sec:concept}
+Hier soll die Idee nach der vorgegangen wird erläutert werden.
+Genauere Angaben zur Sensorik sind in Kapitel \ref{sec:sensors}.
+Die Umsetzung eines Kalman-Filters und warum dies hier nicht gemacht wird sind in Kapitel \ref{sec:kalman} zu fnden.
+Eine Erklärung zur Funktionsweise des Baum-Welch Algorithmus findet sich in Kapitel \ref{sec:BaumWelch}.
+Abschließend wird eine Evaluierung auf Grundlage von Experimenten in Kapitel \ref{sec:evaluation} gezeigt.\\
+
+
+Der Ansatz nutzt in der Praxis zwei Phasen.
+In der Ersten, der Lernphase, wird die Anzahl der zu erkennenden Übungen sowie für jede Übung eine Anzahl an Ausführungen festgelegt.
+Nachdem diese ausgeführt wurden und fertig verarbeitet wurden ist die Lernphase beendet.
+In der Detektionsphase wird eine Anzahl an zu erkennenden Ausführungen festgelegt.
+Nachdem diese ausgeführt wurden, wird das Ergebnis der Detektion ausgegeben und die Detektionsphase ist beendet.
+
+\subsection{Lernphase}
+Die einkommenden 6-dimensionalen Daten werden wie oben beschrieben mit einem K-Means geclustert.
+Der K-Means (\cite{SklearnClusterKMeans2021}) wird auf den kompletten Trainingsdaten initialisiert, also unabhängig von der ausgeführten Übungen.
+Jeder Punkt bekommt dadurch einen Clusternamen zugewiesen, umgesetzt als Nummern, welche weitergegeben werden.
+Die Clusternummern sind die diskreten Beobachtungen die als Eingabe für das Lernen der Hidden Markov Modelle dienen.\\
+Genutzt wird ein Hidden Markov Modell $(\pi, p, q)$ nach \cite{rabinerTutorialHiddenMarkov2001} mit:
 \begin{enumerate}
-\item Accelerometer und Gyrometer mittels mehrdimensionalenm Kalman-Filter bereinigt
-\item gefilterte Daten werden mittels K-Means geclustert
-\item clusterzugehörigkeit als beobachtung in ein HMM zur Erkennung von Aktivität und Zählen
+\item $\pi: Z \rightarrow [0,1]$ für die inititalen Wahrscheinlichkeiten für die Zustände $Z$
+\item $p: Z \times Z \rightarrow [0,1]$ für die Übergangswahrscheinlichkeiten zwischen den Zuständen $Z$
+\item $q: Z \times B \rightarrow [0,1]$ für die Beobachtungswahrscheinlichkeiten für Beobachtung $B$ in Zustand $Z$
 \end{enumerate}
+Ein Hidden Markov Modell für eine Übung wird wie folgt trainiert:\\
+Zuerst werden die Emissionswahrscheinlichkeiten und die Übergänge zwischen den versteckten Zuständen zufällig initialisiert, konkret wird also $\pi$ mit Zufallszahlen im Intervall $[0,1]$ gefüllt.
+Anschließend werden die genannten Werte mittels des Baum-Welch Algorithmus an die in der Lernphase aufgenommenen Sequenzen angepasst, mehr dazu in Kapitel \ref{sec:BaumWelch}.
+Die Hidden Markov Modelle werden mehrfach initialisiert um zu die Wahrscheinlichkeit zu vermindern, dass man nicht über ein lokales Optimum hinauskommt.
+Es wird das Modell gewählt, welches die größte Wahrscheinlichkeit bei der Erkennung der bekannten Übungen aufweist.
+Durch die geringe Anzahl an Lerndaten, wird hier keine Mindestwahrscheinlichkeit gesetzt, da dazu zu wenig Trainingsdaten vorhanden sind.
+In den durchgeführten Experimenten hat sich kein Wert als stabil erwiesen.
+Das liegt an dem Ziel, mit möglichst wenigen Übungen in der Lernphase auszukommen, dadurch bleibt der Trainingsdatenumfang relativ gering, mehr dazu in Kapitel \ref{sec:evaluation}
+
+\subsection{Detektionsphase}
+In der Detektionsphase werden die empfangenen Daten mit dem K-Means aus der Lernphase geclustert.
+Der K-Means ist eingefroren, das heißt die Clustermittelpunkte bleiben wie sie in der Lernphase bestimmt wurden.\\
+Die Beobachtungen einer Durchführung werden allen Hidden Markov Modelle zugeführt, diese geben die Emissionswahrscheinlichkeit für die beobachtete Sequenz aus.
+Es wird die Übung erkannt, dessen zugehöriges Hidden Markov Modell die höchste Wahrscheinlichkeit für die Emission der beobachteten Sequenz ausgibt.
+
+\subsection{Beispiel}
 Es folgt ein Beispiel für eine typische Ausführung während der Detektionsphase:\\
 Während der Ausführung einer Übung werden die Daten des Gyroskops und des Beschleunigungssensors erfasst.
 Für 5 Zeitschritte haben die Gyroskopdaten die Form:
@@ -53,7 +89,7 @@ a_{2}^1 & a_{2}^2 & a_{2}^3 & a_{2}^4 & a_{2}^5 \\
 a_{3}^1 & a_{3}^2 & a_{3}^3 & a_{3}^4 & a_{3}^5 \\
 \end{array}\right]
 \end{align*}
-Diese werden mit einem mehrdimensionalen Kalman-Filter bereinigt und zusammengeführt, das sieht dann so aus:
+Diese werden mit einem mehrdimensionalen Kalman-Filter (Kapitel \ref{sec:kalman}) bereinigt und zusammengeführt, das sieht dann so aus:
 \begin{align*}
 \left[\begin{array}{rrrrr}
 a_{1}^1 & a_{1}^2 & a_{1}^3 & a_{1}^4 & a_{1}^5 \\
@@ -68,34 +104,37 @@ Die Spaltenvektoren dienen als Eingabe für den K-Means Clustering Algorithmus.
 Dieser gibt für jeden Spaltenvektor das zugehörige Cluster $c$ aus:
 \begin{align*}
 \left[\begin{array}{r}
-a_{11}\\
-a_{21}\\
-a_{31}\\
-g_{11}\\
-g_{21}\\
-g_{31}\\
+a_{1}^1\\
+a_{2}^1\\
+a_{3}^1\\
+g_{1}^1\\
+g_{2}^1\\
+g_{3}^1\\
 \end{array}\right]
 \rightarrow c_1
 \end{align*}
 Die Sequenz der Clusternamen dient als Eingabe in $n$ Hidden Markov Modelle, n ist dabei die Anzahl der Übungen, die erkannt werden sollen.
 Die Hidden Markov Modelle geben eine Emissionswahrscheinlichkeit für die beobachtete Folge an:
 \begin{align*}
-\left[c_1, c_2, c_3, c_4, c_5\right] \rightarrow p_1, p_2, .. p_n
+\left[c_1, c_2, c_3, c_4, c_5\right] \rightarrow p_1, ... p_n
 \end{align*}
 Aus den Emissionswahrscheinlichkeiten $p$ wird die größte gewählt.
-Die zum gewählten Hidden Markov Model gehörende Übung gilt als erkannt.
+Die zum gewählten Hidden Markov Modell gehörende Übung gilt als erkannt.
 
+\newpage
 \section{Sensorik}
+\label{sec:sensors}
 Auf dem Arduino werden die Daten des Beschleunigungssensors und des Gyroskop aus dem IMU ausgelesen.
 Das Gyroskop sowie der Beschleunigungssensor werden dem im Datenblatt beschriebenem Selbsttest unterzogen.
 Dieser soll feststellen, dass die Sensoren noch funktionsfähig sind.
 Die zugehörigen Daten werden über die serielle Schnittstelle an ein Pythonskript übermittelt, welches die zugehörigen Rechnungen vornimmt und bei Nichtbestehen des Selbsttests das Programm beendet.
 
 \section{Mehrdimensionaler Kalman-Filter}
+\label{sec:kalman}
 Der mehrdimensionale Kalman-Filter soll hier vernachlässigt werden, da er nicht unbedingt nötig ist für die Erkennung.
-Mit einem solchen Kalman-Filter wäre die Erkennung vermutlich robuster, da mit bereinigten Daten \glqq engere \grqq{} Cluster zu erwarten wären.
+Mit einem solchen Kalman-Filter wäre die Erkennung vermutlich robuster, da mit bereinigten Daten \glqq engere\grqq{} Cluster zu erwarten wären.
 Hier wird aus Zeitgründen auf einen Kalman-Filter verzichtet, da dieser die Ergebnisse zwar verbessern würde, allerdings nicht unbedingt notwendig ist.\\
-Ein solcher Filter würde wie folgt funktionieren;
+Ein solcher Filter würde wie folgt aussehen:
 \begin{align*}
 X^{[t+1]} &= A^{[t]}X^{[t]} + B^{[t]}u^{[t]} + C^{[t]} + \epsilon^{[t]}\\
 \left[\begin{array}{r}
@@ -127,53 +166,22 @@ rg_{3}\\
 Dabei müssen $A^{[t]}$, $B^{[t]}$ und $C^{[t]}$ gesetzt und experimentell überprüft werden.
 $\epsilon^{[t]}$ modelliert das Messrauschen und ist damit bei der Implementierung nicht zu beachten, es darf allerdings nicht vergessen werden, dass der Kalman-Filter nur ein Zustands\textbf{schätzer} ist.
 
-\section{Phasen}
-Der Ansatz nutzt in der Praxis zwei Phasen.
-In der Ersten, der Lernphase, wird die Anzahl der zu erkennenden Übungen sowie für jede Übung eine Anzahl an Ausführungen festgelegt.
-Nachdem diese ausgeführt wurden und fertig verarbeitet wurden ist die Lernphase beendet.
-In der Detektionsphase wird eine Anzahl an zu erkennenden Ausführungen festgelegt.
-Nachdem diese ausgeführt wurden, wird das Ergebnis der Detektion ausgegeben und die Detektionsphase ist beendet.
-
-\subsection{Lernphase}
-Die einkommenden 6-dimensionalen Daten werden wie oben beschrieben mit einem K-Means geclustert.
-Der K-Means wird auf den kompletten Trainingsdaten, also unabhängig von den Übungen, initialisiert.
-Jeder Punkt bekommt dadurch einen Clusternamen zugewiesen, umgesetzt als Nummern, welche weitergegeben werden.
-Die Clusternamen sind die Beobachtungen die als Eingabe für das Lernen der HMMs dienen.\\
-Genutzt wird ein Hidden Markov Model $(\pi, p, q)$ mit:
-\begin{enumerate}
-\item $\pi: Z \rightarrow [0,1]$ als inititale Wahrscheinlichkeiten für die Zustände $Z$
-\item $p: Z \times Z \rightarrow [0,1]$ als Übergangswahrscheinlichkeiten zwischen den Zuständen $Z$
-\item $q: Z \times B \rightarrow [0,1]$ als Beobachtungswahrscheinlichkeiten für die Beobachtung $B$ in den Zuständen $Z$
-\end{enumerate}
-Ein HMM für eine Übung wird wie folgt trainiert:
-Zuerst werden die Emissionswahrscheinlichkeiten und die Übergänge zwischen den versteckten Zuständen zufällig initialisiert, konkret wird also $\pi$ mit Zufallszahlen im Intervall $[0,1]$ gefüllt.
-Anschließend werden die genannten Werte mittels des Baum-Welch Algorithmus an die in der Lernphase aufgenommenen Sequenzen angepasst, mehr dazu in Kapitel \ref{sec:BaumWelch}.
-Die HMMs werden mehrfach initialisiert um zu die Wahrscheinlichkeit zu vermindern, dass man nicht über ein lokales Optimum hinauskommt.
-Es wird das HMM gewählt, welche die größte Wahrscheinlichkeit bei der Erkennung der bekannten Übungen aufweist.
-Durch die geringe Anzahl an Lerndaten, wird hier keine Mindestwahrscheinlichkeit gesetzt, da dazu zu wenig Trainingsdaten vorhanden sind.
-In den durchgeführten Experimenten hat sich kein Wert als stabil erwiesen.
-Das liegt an dem Ziel, mit möglichst wenigen Übungen in der Lernphase auszukommen, dadurch bleibt der Trainingsdatenumfang relativ gering.
-
-\subsection{Detektionsphase}
-In der Detektionsphase werden die empfangenen Daten mit dem K-Means aus der Lernphase geclustert.
-Der K-Means ist eingefroren, das heißt die Clustermittelpunkte bleiben wie sie in der Lernphase festgestellt wurden.\\
-Die Beobachtungen einer Durchführung werden allen HMMs zugeführt, diese geben die Emissionswahrscheinlichkeit für die beobachtete Sequenz aus.
-Es wird die Übung erkannt, dessen zugehöriges HMM die höchste Wahrscheinlichkeit für die Emission der beobachteten Sequenz ausgibt.
-
+\newpage
 \section{Baum-Welch Algorithmus}
 \label{sec:BaumWelch}
 Der Baum-Welch Algorithmus wendet den Maximum-Likelihood Algorithmus auf Hidden Markov Modelle an.
-Genutzt wird ein Hidden Markov Model $(\pi, p, q)$ mit:
+Genutzt wird ein Hidden Markov Modell $(\pi, p, q)$ mit:
 \begin{enumerate}
 \item $\pi: Z \rightarrow [0,1]$ als inititale Wahrscheinlichkeiten für die Zustände $Z$
 \item $p: Z \times Z \rightarrow [0,1]$ als Übergangswahrscheinlichkeiten zwischen den Zuständen $Z$
 \item $q: Z \times B \rightarrow [0,1]$ als Beobachtungswahrscheinlichkeiten für die Beobachtung $B$ in den Zuständen $Z$
 \end{enumerate}
-In der hier genutzten Implementierung sind $p$ und $q$ als Matrizen umgesetzt.
+In der hier genutzten Implementierung (\cite{HmmlearnHmmlearn2021}) sind $p$ und $q$ als Matrizen umgesetzt.
 Diese werden zu Beginn mit zufälligen Werten initialisiert.
 Im ersten Schritt werden die Wahrscheinlichkeiten mit den aktuellen Parametern ermittelt.
-Die Idee hinter dem Baum-Welch Algorithmus ist, die Übergänge, die der wahrscheinlichste Pfad durch das HMM nutzt, wahrscheinlicher zu machen.\\
-Für eine beobachtete Sequenz $O = {o_1, .., o_T}$ heißt das, dass $\pi_i$ in der nächsten Iteration zu $\tilde{\pi}$ und berechnet sich durch:
+Die Idee hinter dem Baum-Welch Algorithmus ist, die Übergänge, die der wahrscheinlichste Pfad durch das Hidden Markov Modell nutzt, wahrscheinlicher zu machen.\\
+Die nachfolgende Passage orientiert sich an der Erklärung in \cite{wunschBaumWelchAlgorithmusFu2001}.
+Für eine beobachtete Sequenz $O = {o_1, .., o_T}$ heißt das, dass $\pi$ in der nächsten Iteration zu $\tilde{\pi}$ und berechnet sich durch:
 \[
 \tilde{\pi_i} = \gamma_i(1)
 \]
@@ -197,18 +205,16 @@ q_i(k) &= \frac{\text{Anzahl der Zeitschritte in i in denen k beobachtet wurde}}
 \end{align*}
 Diese Operationen werden ausgeführt bis sich keiner der Werte um mehr als ein Mindestwert (hier: 0,01) verändert oder die festgelegte Höchstanzahl an Iterationen (hier: 100) erreicht ist.
 
-
-
+\newpage
 \section{Evaluierung}
 \label{sec:evaluation}
 Im Folgenden werden vor allem Experimente mit dem bestehenden Ansatz und verschiedenen Parametern betrachtet.
-Unabhängig davon eine Beobachtungen, die nicht tiefer betrachtet wurden:
-Übungen die keine oder wenig Bewegung des Arduinos umfassen verschlechtern die Erkennungsleistung maßgeblich.
-Es liegt die Vermutung nahe, dass das daran liegt, dass die meisten Übungen im Stillstand beginnen, enden oder einen \glqq Umkehrpunkt \grqq{} beinhalten, sodass mindestens ein Zeitschritt erfasst wird, welcher eine Beschleunigung nahe null aufweist.
+Dabei wurde beobachtet, dass Übungen die keine oder wenig Bewegung des Arduinos umfassen die Erkennungsleistung maßgeblich verschlechtern.
+Es liegt die Vermutung nahe, dass das daran liegt, dass die meisten Übungen im Stillstand beginnen, enden oder einen \glqq Umkehrpunkt\grqq{} beinhalten, sodass meist ein Zeitschritt erfasst wird, welcher eine Beschleunigung nahe null aufweist.
 Man kann diesen Sprung in den folgenden Diagrammen auch beobachte, der Sprung in der Erkennungsleistung von Abbildung \ref{fig:drei} auf Abbildung \ref{fig:vier} liegt unter anderem daran, dass die vierte Übung viel Stillstand beinhält.\\
 Die folgenden Diagramme wurden erstellt mit verschiedener Anzahl an Übungen die erkennt werden sollen.
 Auf der Hochachse ist der Anteil an richtig erkannten Übungen aufgetragen, auf den anderen Achse jeweils die Clusteranzahl und die Ausführungsanzahl während der Trainingsphase.
-Hier werden nicht die üblichen Maße Precision und Recall genutzt, da wie oben beschrieben keine feste Mindestwahrscheinlichkeit festgelegt werden konnte und damit ein Nichterkennen nicht scharf definiert werden kann.\\
+Hier werden nicht die üblichen Maße Precision und Recall genutzt, da wie oben beschrieben keine feste Mindestwahrscheinlichkeit festgelegt werden konnte und damit ein Nichterkennen nicht scharf definiert werden kann, da das entsprechende Hidden Markov Modell zwar eine hohe Wahrscheinlichkeit aufweisen kann, ein Fehlerhaftes jedoch eine noch größere, was nichts über das beobachtete Modell aussagt.\\
 Die Daten zu den Schaubildern bauen aufeinander auf, die Ausführungen für die Übungen sind immer die selben, es werden nur mehr Übungen oder Ausführungen betrachtet.
 Die gesehenen Ausführungen sind also entlang einer Linie immer die selben.
 Die Hidden Markov Modelle haben jeweils 5 Zustände, was sich in Experimenten, die hier nicht ausgeführt werden sollen als bester Kompromiss zwischen Lernzeit und Erkennungsleistung herausgestellt hat.
@@ -230,8 +236,8 @@ Die Anzahl an Ausführungen spielt in diesem Fall dagegen eine eher untergeordne
 \end{figure}\\
 In Abbildung \ref{fig:drei} wird erkennbar, dass die Anzahl an Ausführungen mehr ins Gewicht fällt.
 Auch hier ist wieder zu erkennen, dass ein etwas größeres $k$ bessere Ergebnisse erzielt.
-Dieses sollte man jedoch auch nicht zu hoch wählen, da man sonst riskiert einzelne, tatsächliche Cluster aufzuteilen welche das Hidden Markov Model dann als gleichwertig erlernen muss.
-Außerdem wird damit auch das Hidden Markov Model umfangreicher und mehr Ausführungsdaten werden benötigt um gute Erebnisse zu erzielen.\\
+Dieses sollte man jedoch auch nicht zu hoch wählen, da man sonst riskiert einzelne, tatsächliche Cluster aufzuteilen welche das Hidden Markov Modell dann als gleichwertig erlernen muss.
+Außerdem wird damit auch das Hidden Markov Modell umfangreicher und mehr Ausführungsdaten werden benötigt um gute Erebnisse zu erzielen.\\
 \medskip
 \begin{figure}[htbp]
 \centering
@@ -255,5 +261,9 @@ Abschließend lässt sich feststellen, dass mehr Ausführungen bei mehr Übungen
 Darüber hinaus sollte auch immer ein $k$ gewählt werden, das nicht zu klein ist, vor allem für wenige Übungen.\\
 Als Ausgangspunkt empfiehlt es sich $k=5$ zu setzen, $5$ versteckte Zustände zu nutzen und $5$ Ausführungen zu nutzen, diese können dann natürlich je nach Performanz angepasst werden.
 
+\newpage
+\addcontentsline{toc}{section}{Bibliographie}
+\bibliographystyle{apalike}
+\bibliography{phyb}
 
 \end{document}
