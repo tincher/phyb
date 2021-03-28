@@ -15,14 +15,14 @@
 \clearpage
 
 \begin{abstract}
-Sensorbasiert sollen ähnlich einer Fitnessuhr verschiedene Sportübungen erkennt sowie die Anzahl wie oft diese jeweils ausgeführt wurden.
+Es sollen sensorbasiert ähnlich einer Fitnessuhr verschiedene Sportübungen sowie deren Anzahl erkannt werden.
 Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
 Mein Lösungsansatz gliedert sich in mehrere Stufen:
 die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
-Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen.
+Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen. % TODO machen ugs
 In der Lernphase wird mit diesen Beobachtungen pro Übung ein Hidden Markov Model erlernt.
 In der folgenden Detektionsphase werden die empfangenen Daten ebenfalls geclustert und die Beobachtungen an alle Hidden Markov Modelle weitergegeben.
-Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als ausgeführt behandelt.
+Das Hidden Markov Modell, welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als ausgeführt behandelt.
 \end{abstract}
 \clearpage
 
@@ -31,7 +31,7 @@ Das HMM welches die höchste Wahrscheinlichkeit für die Emittierung der beobach
 
 \section{Konzept}
 \begin{enumerate}
-\item Accelerometer und Gyrometer mittels mehrdimensionalenm Kalman-Filter bereinigt
+\item Accelerometer und Gyrometer mittels mehrdimensionalem Kalman-Filter bereinigt
 \item gefilterte Daten werden mittels K-Means geclustert
 \item clusterzugehörigkeit als beobachtung in ein HMM zur Erkennung von Aktivität und Zählen
 \end{enumerate}
@@ -96,7 +96,7 @@ Der mehrdimensionale Kalman-Filter soll hier vernachlässigt werden, da er nicht
 Mit einem solchen Kalman-Filter wäre die Erkennung vermutlich robuster, da mit bereinigten Daten \glqq engere \grqq{} Cluster zu erwarten wären.
 Hier wird aus Zeitgründen auf einen Kalman-Filter verzichtet, da dieser die Ergebnisse zwar verbessern würde, allerdings nicht unbedingt notwendig ist.\\
 Ein solcher Filter würde wie folgt funktionieren;
-\begin{align*}
+\begin{align-*}
 X^{[t+1]} &= A^{[t]}X^{[t]} + B^{[t]}u^{[t]} + C^{[t]} + \epsilon^{[t]}\\
 \left[\begin{array}{r}
 a_{1}\\
