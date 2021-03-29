@@ -14,12 +14,13 @@ if __name__ == '__main__':
     exercise_count = 2
     learning_runs_per_exercise = 5
     learn_data = []
+    arduino_path = '/dev/cu.usbserial-1420'
 
     print('LERNPHASE')
     for i in range(exercise_count):
         print_learning_for_activity(i, learning_runs_per_exercise)
         print_countdown_when_ready(0)
-        exercise_data = read_from_arduino(learning_runs_per_exercise)
+        exercise_data = read_from_arduino(arduino_path, count=learning_runs_per_exercise)
         learn_data.append(exercise_data)
 
     predictor = MyPredictor(learn_data, cluster_count=5, components_counts=[5, 5])
@@ -30,6 +31,6 @@ if __name__ == '__main__':
 
     count = int(cli_ui.ask_string('Wie viele Ausführungen werden Sie machen?', default=5))
     print_countdown_when_ready(0)
-    recognition_data = read_from_arduino(count)
+    recognition_data = read_from_arduino(arduino_path, count=count)
     prediction, _ = predictor.predict(recognition_data, exercise_count)
     print_prediction(exercise_count, prediction)

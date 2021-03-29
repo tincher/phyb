@@ -14,18 +14,22 @@ volatile int out = 0;
 volatile int secondIn = 0;
 volatile int secondOut = 0;
 
-
+/**
+ *    container for the data retrieved from the IMU
+ */
 typedef struct {
     int16_t accel_x, accel_y, accel_z;
     int16_t gyro_x, gyro_y, gyro_z;
 } IMU_Data;
 
+/**
+ *    contains the data for the self-test
+ */
 typedef struct {
     uint8_t XA, YA, ZA;
     uint8_t XG, YG, ZG;
 } SelfTestData;
 
-volatile uint8_t currentlymeasuring = 0;
 
 void USART_init(void) {
     // set baud rate
@@ -52,32 +56,15 @@ void writeToBuffer(char data){
     setupBuffer();
 }
 
-void writeToSecondBuffer(char data){
-    second_buffer[secondOut] = data;
-    secondOut = (secondOut + 1) % 128;
-    setupBuffer();
-}
-
-
 char getFromBuffer(void){
     char result = buffer[in];
     in = (in + 1) % 128;
     return result;
 }
 
-char getFromSecondBuffer(void){
-    char result = second_buffer[secondIn];
-    secondIn = (secondIn + 1) % 128;
-    return result;
-}
-
 int isBufferEmpty(void){
     return (in == out);
 }
-int isSecondBufferEmpty(void){
-    return (secondIn == secondOut);
-}
-
 
 // output character on serial line
 void put_c( unsigned char data ) {
@@ -125,7 +112,10 @@ void putHex(int16_t x) {
 }
 
 
-
+/**
+ *    writes IMU data to the buffer with a leading D(ata)
+ *    @param d contains the IMU data
+ */
 void putIMUData(IMU_Data *d){
     writeToBuffer('D');
     writeToBuffer(' ');
@@ -143,6 +133,11 @@ void putIMUData(IMU_Data *d){
     writeToBuffer('\n');
 }
 
+
+/**
+ *    writes IMU data to the buffer with a leading S(elf-test)
+ *    @param d contains the self-test data
+ */
 void putSelfTestData(SelfTestData *d){
     writeToBuffer('S');
     writeToBuffer(' ');
@@ -287,7 +282,10 @@ void imu_init(uint8_t a_scale, uint8_t g_scale) {
     I2C_poke(MPU_6050, 0x1C, config | (a_scale << 3)); // set accelerometer range
 }
 
-
+/**
+ *    retrieves the self test data
+ *    @param stdata contains the self test data
+ */
 void getSTData(SelfTestData *stdata){
     uint8_t raw_data[4];
     I2C_read_registers(MPU_6050, 0x0d, raw_data, 4);
@@ -299,9 +297,10 @@ void getSTData(SelfTestData *stdata){
     stdata->ZG = (uint8_t)(raw_data[2] & 0x1f);
 }
 
-
+/**
+ *    retrieve the data for the self-test and write it to buffer
+ */
 void selfTest(void){
-    // höchstens 14 erlaubt bei beiden
     IMU_Data dataST;
     imu_get_data(&dataST);
 
@@ -325,21 +324,18 @@ void selfTest(void){
 }
 
 
-// simple test program to print IMU data
 int __attribute__((OS_main)) main(void) {
     USART_init();   // initialize serial
-    setupBuffer();
-
-    // maybe needed
-    // initTimer();
+    setupBuffer();  // initialize buffer for serial communication
 
     I2C_init();     // initialize I2C interface for IMU
     imu_init(2, 1); // 2: 8g full range; 0: 250 degrees per second full range
 
-    selfTest();
-    sei();
+    selfTest();     // conduct self-test
+    sei();          // enable interrupts
 
     IMU_Data d;
+    // whenever the IMU has new data, write it to the buffer
     while (1) {
         if(imu_has_new_data()) {
             imu_get_data(&d);
@@ -349,12 +345,12 @@ int __attribute__((OS_main)) main(void) {
     }
 }
 
-
-
+// interrupts whenever new data can be transmitted
 ISR(USART_UDRE_vect) {
     if (isBufferEmpty()) { // noch Zeichen im Puffer zum Senden?
         UCSR0B &= (255 ^ (1<<UDRIE0));
     }else {
+        //transmits the data
         char toBeTransmitted;
         if (!isBufferEmpty()){
             toBeTransmitted = getFromBuffer();

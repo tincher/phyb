@@ -6,6 +6,32 @@ from sklearn.cluster import KMeans
 import math
 
 class MyPredictor:
+    '''Predictor handles the learning and the prediction.
+
+    Parameters
+    ----------
+    exercise_data : array_like
+        The data from the learning phase
+    cluster_count : int
+        k for the k-means (the default is 5).
+    components_counts : array_like
+        how many hidden states the HMMs will have (the default is [3, 3]).
+    init_count : int
+        how often the HMMs are initialized (the default is 5).
+
+    Attributes
+    ----------
+    all_exercises_data : array_like
+        the data points grouped by the exercises and executions
+    all_data : array_like
+        all data in a flat structure
+    kmeans : sklearn.cluster.KMeans
+        object containing the k-means
+    HMMs : array_like
+        HMMs for each exercise which will be recognized.
+    components_counts
+
+    '''
     def __init__(self, exercise_data, cluster_count=5, components_counts=[3, 3], init_count=5):
         self.all_exercises_data = exercise_data
         self.all_data = None
@@ -19,6 +45,19 @@ class MyPredictor:
         self.learn(cluster_count, init_count)
 
     def learn(self, cluster_count, init_count):
+        ''''Set the k-means and learn the HMMs
+
+        Parameters
+        ----------
+        cluster_count : int
+            k for the k-means
+        init_count : int
+            how often the HMMs should be initialized
+
+        Returns
+        -------
+        None
+        '''
         best_score = -sys.maxsize
         for i, exercise_data in enumerate(self.all_exercises_data):
             exercise_labels = []
@@ -46,6 +85,21 @@ class MyPredictor:
                 current_hmm.emissionprob_ = np.hstack((current_hmm.emissionprob_, additional_columns))
 
     def predict(self, data, exercise_count):
+        '''Predict which exercises are done.
+
+        Parameters
+        ----------
+        data : array_like
+            Data points captured for the exercises.
+        exercise_count : int
+            Number of exercises that could be recognised.
+
+        Returns
+        -------
+        tuple
+            counter: array_like of how often the exercises are recognised
+            timeline: for each execution: what exercise this is recognised as
+        '''
         counter = [0] * (exercise_count + 1)
         timeline = []
         for run in data:
@@ -62,9 +116,30 @@ class MyPredictor:
         return counter, timeline
 
     def save_model(self, path='./predictor.pkl'):
+        '''Saves the current model.
+
+        Parameters
+        ----------
+        path : string
+            Path where to save the model (the default is './predictor.pkl').
+
+        Returns
+        -------
+        None
+        '''
         with open(path, 'wb') as file:
             pickle.dump(self, file)
 
     def load_model(self, path='./predictor.pkl'):
+        '''Loads a saved model.
+
+        Parameters
+        ----------
+        path : string
+            Path to the saved model (the default is './predictor.pkl').
+        Returns
+        -------
+        None
+        '''
         with open(path, 'rb') as file:
             self = pickle.load(file)
