@@ -19,7 +19,7 @@ Es sollen sensorbasiert ähnlich einer Fitnessuhr verschiedene Sportübungen sow
 Benutzt werden sollen der Beschleunigungssensor und das Gyroskop des IMU-6050.\\
 Mein Lösungsansatz gliedert sich in mehrere Stufen:
 die Rohdaten aus dem IMU-6050 sollten durch einen mehrdimensionalen Kalman-Filter bereinigt werden.
-Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um daraus sogenannte \glqq{}Beobachtungen\grqq{} zu machen. % TODO machen ugs
+Die bereinigten Daten werden mit dem K-Means Algorithmus geclustert um sie in Beobachtungen zu verarbeiten.
 In der Lernphase wird mit diesen Beobachtungen pro Übung ein Hidden Markov Model erlernt.
 In der folgenden Detektionsphase werden die empfangenen Daten ebenfalls geclustert und die Beobachtungen an alle Hidden Markov Modelle weitergegeben.
 Das Hidden Markov Modell, welches die höchste Wahrscheinlichkeit für die Emittierung der beobachteten Folge bestimmt, gilt als Erkenner und die zugehörige Übung wird als ausgeführt behandelt.
@@ -125,7 +125,15 @@ Die zum gewählten Hidden Markov Modell gehörende Übung gilt als erkannt.
 Auf dem Arduino werden die Daten des Beschleunigungssensors und des Gyroskop aus dem IMU ausgelesen.
 Das Gyroskop sowie der Beschleunigungssensor werden dem im Datenblatt beschriebenem Selbsttest unterzogen.
 Dieser soll feststellen, ob die Sensoren noch funktionsfähig sind.
-Die zugehörigen Daten werden über die serielle Schnittstelle an ein Pythonskript übermittelt, welches die zugehörigen Rechnungen vornimmt und bei Nichtbestehen des Selbsttests das Programm beendet.
+Die zugehörigen Daten werden über die serielle Schnittstelle an ein Pythonskript übermittelt, welches die zugehörigen Rechnungen vornimmt und bei Nichtbestehen des Selbsttests das Programm beendet.\\
+Der Aufbau des Arduinos ist in Abbildung \ref{fig:arduino} zu sehen.
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/aufbau.jpg}
+\caption{Aufbau und Verbindungen des Arduinos und des genutzten Sensors.}
+\label{fig:arduino}
+\end{figure}\\
+
 
 \section{Mehrdimensionaler Kalman-Filter}
 \label{sec:kalman}
@@ -214,7 +222,8 @@ Man kann diesen Sprung in den folgenden Diagrammen auch beobachten: der Sprung i
 Die folgenden Diagramme wurden mit verschieden vielen Übungen, die erkannt werden sollen erstellt.
 Auf der Hochachse ist der Anteil an richtig erkannten Übungen aufgetragen.
 Auf den anderen Achse jeweils die Clusteranzahl und die Ausführungsanzahl während der Trainingsphase.
-Hier werden nicht die üblichen Maße Precision und Recall genutzt, da wie oben beschrieben keine feste Mindestwahrscheinlichkeit festgelegt werden konnte und damit ein Nichterkennen nicht scharf definiert werden kann, da das entsprechende Hidden Markov Modell zwar eine hohe Wahrscheinlichkeit aufweisen kann, ein Fehlerhaftes jedoch eine noch größere, was nichts über das beobachtete Modell aussagt.\\ % TODO viel zu lang
+Hier werden nicht die üblichen Maße Precision und Recall genutzt, da wie oben beschrieben keine feste Mindestwahrscheinlichkeit festgelegt werden konnte und damit ein Nichterkennen nicht scharf definiert werden kann.
+Das liegt daran, dass das entsprechende Hidden Markov Modell zwar eine hohe Wahrscheinlichkeit ausgeben kann, ein Fehlerhaftes jedoch eine noch größere, was aber nichts über das betrachtete Modell aussagt.\\
 Die Daten zu den Schaubildern bauen aufeinander auf, die Ausführungen für die Übungen sind immer dieselben.
 Es werden nur mehr Übungen oder Ausführungen betrachtet.
 Die gesehenen Ausführungen sind also entlang einer Linie immer die selben.
