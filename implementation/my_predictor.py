@@ -100,7 +100,7 @@ class MyPredictor:
             counter: array_like of how often the exercises are recognised
             timeline: for each execution: what exercise this is recognised as
         '''
-        counter = [0] * (exercise_count + 1)
+        counter = [0] * exercise_count
         timeline = []
         for run in data:
             labels = self.kmeans.predict(run)

@@ -35,4 +35,4 @@ if __name__ == '__main__':
     print_countdown_when_ready(0)
     recognition_data = read_from_arduino(arduino_path, count=count)
     prediction, _ = predictor.predict(recognition_data, exercise_count)
-    print_prediction(exercise_count, prediction)
+    print_prediction(prediction)
