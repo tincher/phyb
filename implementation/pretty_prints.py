@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import cli_ui
 from num2words import num2words
 
@@ -53,7 +56,7 @@ def print_learning_for_activity(counter, learning_runs_per_exercise):
     '''
     number_name = num2words(counter + 1, lang='de', to='ordinal')
     print('Führen Sie sobald der grüne Kreis erscheint die {} Übung {} mal aus'.format(number_name, learning_runs_per_exercise))
-    print('Nach der Ausführung jeder Ausführung drücken Sie STRG-C')
+    print('Drücken Sie STRG-C nach jeder Ausführung!')
 
 
 def print_circle(color):
