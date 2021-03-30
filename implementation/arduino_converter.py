@@ -36,7 +36,7 @@ def read_from_arduino(arduino_path, count=5, baud=57600):
                     elif result == ['ST failed']:
                         print('Sensor self-test failed!')
                         exit()
-                    elif resutl == ['ST init']:
+                    elif result == ['ST init']:
                         pass
                     elif result is not None:
                         current_run.append(result)

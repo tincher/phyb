@@ -18,8 +18,8 @@
 ############################################################################
 
 CLOCK        = 16000000UL
-TARGET       = combined
-DEPS 		 =
+TARGET       = main
+DEPS         =
 SRC          = $(TARGET).c $(DEPS)
 AVRDUDE_PORT = /dev/cu.usbserial-1420
 
