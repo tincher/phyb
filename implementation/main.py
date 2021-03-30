@@ -11,19 +11,21 @@ from serial import Serial
 
 
 if __name__ == '__main__':
-    exercise_count = 2
-    learning_runs_per_exercise = 5
-    learn_data = []
     arduino_path = '/dev/cu.usbserial-1420'
+    exercise_count = 2
+    hidden_states = 5
+    cluster_count = 5
+    runs_per_exercise = 5
 
+    learn_data = []
     print('LERNPHASE')
     for i in range(exercise_count):
-        print_learning_for_activity(i, learning_runs_per_exercise)
+        print_learning_for_activity(i, runs_per_exercise)
         print_countdown_when_ready(0)
-        exercise_data = read_from_arduino(arduino_path, count=learning_runs_per_exercise)
+        exercise_data = read_from_arduino(arduino_path, count=runs_per_exercise)
         learn_data.append(exercise_data)
 
-    predictor = MyPredictor(learn_data, cluster_count=5, components_counts=[5, 5])
+    predictor = MyPredictor(learn_data, cluster_count=cluster_count, components_counts=[hidden_states] * exercise_count)
 
     print('Lernphase beendet')
     print()
